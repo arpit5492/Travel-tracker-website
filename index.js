@@ -38,19 +38,33 @@ app.get("/", async (req, res) => {
   res.render("index.ejs", { countries: countries, total: countries.length });
 });
 
-//INSERT new country
-app.post("/add", async (req, res) => {
+app.post("/add", async(req, res) => {
   const cntry = req.body.country;
-  console.log(cntry);
-  const result = await db.query("SELECT country_code FROM countries WHERE country_name LIKE $1",
-  [cntry]);
-  console.log(result.rows);
-  console.log(result.rows[0].country_code);
-  if(result.rows.length !== 0){
+
+  try{
+    const result = await db.query("SELECT country_code FROM countries WHERE country_name = $1", [cntry]);
+
     const code = result.rows[0].country_code;
-    await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", 
-    [code]);
-    res.redirect("/");
+    try{
+      await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [code]);
+      res.redirect("/");
+    } catch(err) {
+      // console.log(err);
+      const countries = await checkVisisted();
+      res.render("index.ejs", {
+        countries: countries,
+        total: countries.length,
+        error: "Country name already exists. Please put a different country name"
+      });
+    }
+  } catch(err) {
+    // console.log(err);
+    const countries = await checkVisisted();
+    res.render("index.ejs", {
+      countries: countries,
+      total: countries.length,
+      error: "Invalid country name. Please try again"
+    });
   }
 });
 
